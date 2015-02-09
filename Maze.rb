@@ -31,10 +31,13 @@ class Maze
   
   def solve(begX, begY, endX, endY)
     begI = to_index(begX, begY)
-    @endI = to_index(endX, endY)
+    endI = to_index(endX, endY)
 
+    return false if @maze[begI] == "1" || @maze[endI] == "1"
+    @endI = endI
     buildTree(begI) if @begI != begI
 
+    # Depth-first Search
     @root.each do |node|
       if node.name == @endI.to_s
         @solution = node
@@ -63,11 +66,24 @@ class Maze
       puts "You must call trace before display_trace."
       return
     end
-    @steps.each { |i| @solveMaze[i] = "3" }
+    @steps.each { |i| @solveMaze[i] = "3" } # 3 => trace cell
     maze_display = @solveMaze.chars.map.with_index { |digit, i| solved_digit_to_symbol(i) }.join
     plane_display(maze_display)
   end
 
+  def redesign
+    load_empty("4") # 4 => undecided cell
+    r = Random.new
+    begEdge = r.rand(4)
+    if begEdge == 0
+      begY = 1
+    elsif begEdge == 1
+      begY = @ySize - 2
+    else
+      begY = r.rand(@ySize - 2) + 1
+    end
+  end
+  
   private
   # Part 1 Load maze
   def load_empty(cell = "0")
