@@ -1,17 +1,19 @@
+require 'tree'
+
 class Maze
   def initialize(xSize, ySize)
     @xSize = xSize
     @ySize = ySize
-    @maze = "1" * xSize + ("1" + "0"*(@xSize-2) + "1") * (ySize - 2) + "1" * xSize
+    load_empty()
+  end
+
+  def plane_display(map=@maze)
+    (0...@ySize).each { |y| puts map[y * @xSize .. (y + 1) * @xSize -1]}
   end
 
   def display
-    #p @maze
-    #(0...@ySize).each {|y| puts @maze[y*@xSize .. (y+1)*@xSize-1]}
-
-    maze_display = @maze.chars.map.with_index { |digit, i| digit_to_symble(i) }.join
-
-    (0...@ySize).each { |y| puts maze_display[y * @xSize .. (y + 1) * @xSize -1] }
+    maze_display = @maze.chars.map.with_index { |digit, i| digit_to_symbol(i) }.join
+    plane_display(maze_display)
   end
 
   def load(s)
@@ -26,10 +28,78 @@ class Maze
       @maze = s
     end
   end
-        
+  
+  def solve(begX, begY, endX, endY)
+    begI = to_index(begX, begY)
+    @endI = to_index(endX, endY)
 
+    buildTree(begI) if @begI != begI
 
-  def digit_to_symble(*args)
+    @root.each do |node|
+      if node.name == @endI.to_s
+        @solution = node
+        return true
+      end
+    end
+    return false
+  end
+
+  def trace(begX, begY, endX, endY)
+    begI = to_index(begX, begY)
+    endI = to_index(endX, endY)
+
+    if @begI != begI || @endI != endI
+      if !solve(begX, begY, endX, endY)
+        return nil
+      end
+    end
+
+    @steps = @solution.parentage.map{ |node| node.name.to_i}.reverse.push(endI)
+    return @steps.map { |i| to_xy(i)}
+  end
+
+  def display_trace
+    @steps.each { |i| @solveMaze[i] = "3" }
+    maze_display = @solveMaze.chars.map.with_index { |digit, i| solved_digit_to_symbol(i) }.join
+    plane_display(maze_display)
+  end
+
+  def buildTree(rootName)
+    @begI = rootName
+    @solveMaze = @maze.clone
+    @solveMaze[rootName] = "2"
+    @root = Tree::TreeNode.new(rootName.to_s)
+
+    addChildren(@root)
+  end
+
+  def addChildren(p)
+    index = p.name.to_i
+    [topOf(index), bottomOf(index), leftOf(index), rightOf(index)].each_with_index do |childName, i|
+      tryAddNode(childName, p)
+    end
+    p.children.each do |child|
+      addChildren(child)
+    end
+    return unless p.has_children?
+  end
+
+  def tryAddNode(childName, parent)
+    return if @solveMaze[childName].to_i > 0
+    @solveMaze[childName] = "2" # 2 => has been visited
+    parent << Tree::TreeNode.new(childName.to_s)
+    return to_xy(childName)
+  end
+
+  def load_empty(cell = "0")
+    @maze = "1" * @xSize + ("1" + cell * (@xSize - 2) + "1") * (@ySize - 2) + "1" * @xSize
+  end
+
+  def solved_digit_to_symbol(*args)
+    return @solveMaze[to_index(*args)] == "3" ? "*" : digit_to_symbol(*args)
+  end
+
+  def digit_to_symbol(*args)
     return " " if @maze[to_index(*args)]=="0"
     s = getSurroundings(*args)
     if (s == "1100")
@@ -39,6 +109,10 @@ class Maze
     else
       return "+"
     end
+  end
+
+  def digitAt(*args)
+    return args[0].nil? ? nil : @maze[to_index(*args)]
   end
 
   def getSurroundings(*args)
@@ -61,10 +135,6 @@ class Maze
     else
       return args[1] * @xSize + args[0]
     end
-  end
-
-  def digitAt(*args)
-    return args[0].nil? ? nil : @maze[to_index(*args)]
   end
 
   def topOf(*args)
