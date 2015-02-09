@@ -1,9 +1,10 @@
-require 'tree'
+require 'rubytree'
 
 class Maze
   def initialize(xSize, ySize)
     @xSize = xSize
     @ySize = ySize
+    checkGemVersion()
     load_empty()
   end
 
@@ -59,9 +60,17 @@ class Maze
   end
 
   def display_trace
+    if @steps.nil?
+      puts "You must call trace before display_trace."
+      return
+    end
     @steps.each { |i| @solveMaze[i] = "3" }
     maze_display = @solveMaze.chars.map.with_index { |digit, i| solved_digit_to_symbol(i) }.join
     plane_display(maze_display)
+  end
+
+  def checkGemVersion
+    
   end
 
   def buildTree(rootName)
