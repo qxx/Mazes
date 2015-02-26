@@ -1,4 +1,10 @@
-require 'rubytree'
+begin
+  require 'rubytree'
+rescue LoadError
+  puts "Cannot load such file -- rubytree (LoadError)"
+  puts "try 'gem install rubytree' and run again"
+  exit(1)
+end
 
 class Maze
   def initialize(xSize, ySize)
