@@ -7,21 +7,25 @@ rescue LoadError
 end
 
 class Maze
+  # Create an empty maze
   def initialize(xSize, ySize)
     @xSize = xSize
     @ySize = ySize
     load_empty()
   end
 
+  # Print the digit representation of the maze, mostly for debug purpose
   def plane_display(map=@maze)
     (0...@ySize).each { |y| puts map[y * @xSize .. (y + 1) * @xSize -1]}
   end
 
+  # Print the maze using the exact same representation given in the instruction
   def display
     maze_display = @maze.chars.map.with_index { |digit, i| digit_to_symbol(i) }.join
     plane_display(maze_display)
   end
 
+  # Store an input string in the maze. The string size must match maze size
   def load(s)
     s.chomp!
     if s.length != @xSize * @ySize
@@ -35,12 +39,15 @@ class Maze
     end
   end
   
+  # Determine if the mazes can be solved. Record the solution if there is one.
   def solve(begX, begY, endX, endY)
     begI = to_index(begX, begY)
     endI = to_index(endX, endY)
 
+    # must begin and end in an empty cell
     return false if @maze[begI] == "1" || @maze[endI] == "1"
     @endI = endI
+    # no need to rebuild the search tree if the begin point hasn't changed
     buildTree(begI) if @begI != begI
 
     # Depth-first Search
@@ -58,11 +65,13 @@ class Maze
     endI = to_index(endX, endY)
 
     if @begI != begI || @endI != endI
+      # check if the maze can be solved
       if !solve(begX, begY, endX, endY)
         return nil
       end
     end
 
+    # Simply go up through the search tree
     @steps = @solution.parentage.map{ |node| node.name.to_i}.reverse.push(endI)
     return @steps.map { |i| to_xy(i)}
   end
@@ -206,9 +215,11 @@ class Maze
 
   def addChildren(p)
     index = p.name.to_i
+    # try each of the surrounding cells see if they can be add to the tree
     [topOf(index), bottomOf(index), leftOf(index), rightOf(index)].each_with_index do |childName, i|
       tryAddNode(childName, p)
     end
+    # add children recursively
     p.children.each do |child|
       addChildren(child)
     end
@@ -224,6 +235,9 @@ class Maze
 
   # Part 5 Redesign maze
   def load_empty_redesign
+    @xSize += 1 if @xSize.even?
+    @ySize += 1 if @ySize.even?
+    # mark all odd cells unvisited, and mark the rest cells walls
     load_empty("1")
     oddX = (1..@xSize-1).step(2).to_a
     oddY = (1..@ySize-1).step(2).to_a
