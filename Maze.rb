@@ -25,7 +25,7 @@ class Maze
   def load(s)
     s.chomp!
     if s.length != @xSize * @ySize
-      puts "Input string size does not match"
+      puts "Input string size does not match with maze size"
       exit(1)
     elsif (s =~ /[^01]/) != nil
       puts "Input string contains illegal characters"
@@ -76,17 +76,41 @@ class Maze
     maze_display = @solveMaze.chars.map.with_index { |digit, i| solved_digit_to_symbol(i) }.join
     plane_display(maze_display)
   end
-
+  
+  # Using DFS recursive backtracker
   def redesign
-    load_empty("4") # 4 => undecided cell
-    r = Random.new
-    begEdge = r.rand(4)
-    if begEdge == 0
-      begY = 1
-    elsif begEdge == 1
-      begY = @ySize - 2
-    else
-      begY = r.rand(@ySize - 2) + 1
+    load_empty_redesign
+    # clear solution cache
+    @begI = -1
+
+    stack = Array.new
+
+    current = to_index(1, 1)
+    @maze[current] = "0"
+
+    while @maze.include? "4" # "4" => unvisited cell
+      
+      unvisited_neighbours = secondary_neighbours(current).select { |i| digitAt(i) == "4" }
+      if unvisited_neighbours.any?
+        # choose randomly one of the unvisited neighbours
+        chosen = unvisited_neighbours.sample
+        # push the current cell to to stack
+        stack.push(current)
+        # remove the wall between the current cell and the chosen cell
+        @maze[cell_between(current, chosen)] = "0"
+        # make the chosen cell the current cell and mark it as visited
+        current = chosen
+        @maze[current] = "0"
+      elsif stack.any?
+        # pop a cell from the stack
+        # make it the current cell
+        current = stack.pop
+      else
+        # pick a random unvisited cell, make it the current cell and mark it as visited
+        current = match_index(@maze, "4").sample
+        @maze[current] = "0"
+      end
+
     end
   end
   
@@ -133,6 +157,16 @@ class Maze
     return x == @xSize - 1 ? nil : to_index(x + 1, y)
   end
 
+  def neighbours(*args)
+    [topOf(*args), bottomOf(*args), leftOf(*args), rightOf(*args)]
+  end
+
+  def secondary_neighbours(*args)
+    [topOf(topOf(*args)), bottomOf(bottomOf(*args)), leftOf(leftOf(*args)), rightOf(rightOf(*args))]
+  end
+
+
+
   # Part 3 Display maze
   def solved_digit_to_symbol(*args)
     return @solveMaze[to_index(*args)] == "3" ? "*" : digit_to_symbol(*args)
@@ -155,8 +189,8 @@ class Maze
   end
 
   def getSurroundings(*args)
-    s = digitAt(topOf(*args)).to_i.to_s + digitAt(bottomOf(*args)).to_i.to_s +
-        digitAt(leftOf(*args)).to_i.to_s + digitAt(rightOf(*args)).to_i.to_s
+    s = ""
+    neighbours(*args).each { |i| s += digitAt(i).to_i.to_s}
     return s
   end
 
@@ -188,4 +222,30 @@ class Maze
     return to_xy(childName)
   end
 
+  # Part 5 Redesign maze
+  def load_empty_redesign
+    load_empty("1")
+    oddX = (1..@xSize-1).step(2).to_a
+    oddY = (1..@ySize-1).step(2).to_a
+    empty_cells = oddX.product(oddY).map { |tuple| to_index(*tuple) }
+    empty_cells.each { |index| @maze[index] = "4"}  # "4" => unvisited cell
+  end
+
+  def cell_between(i, j)
+    x1, y1 = to_xy(i)
+    x2, y2 = to_xy(j)
+    if x1 == x2
+      return to_index(x1, (y1 + y2) / 2)
+    elsif y1 == y2
+      return to_index((x1 + x2) / 2, y1)
+    else
+      return nil
+    end
+  end
+
+  def match_index(str, pattern)
+    res = []
+    str.scan(pattern) { res << Regexp.last_match.offset(0).first}
+    return res
+  end
 end
