@@ -216,7 +216,7 @@ class Maze
   def addChildren(p)
     index = p.name.to_i
     # try each of the surrounding cells see if they can be add to the tree
-    [topOf(index), bottomOf(index), leftOf(index), rightOf(index)].each_with_index do |childName, i|
+    [topOf(index), bottomOf(index), leftOf(index), rightOf(index)].each do |childName|
       tryAddNode(childName, p)
     end
     # add children recursively
