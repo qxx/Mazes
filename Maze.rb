@@ -1,3 +1,10 @@
+## Digit representation interpretation
+# "0" => empty cell / unvisited cell when building search tree
+# "1" => wall
+# "2" => visited when building search tree
+# "3" => trace of solution, used in display_trace
+# "4" => unvisited cell when redesigning, which means it's not decided that whether it's an empty cell or wall
+
 begin
   require 'rubytree'
 rescue LoadError
@@ -47,10 +54,12 @@ class Maze
     # must begin and end in an empty cell
     return false if @maze[begI] == "1" || @maze[endI] == "1"
     @endI = endI
-    # no need to rebuild the search tree if the begin point hasn't changed
+    # the whole maze is traversed and the search tree is build in advance,
+    # so that thers's no need to rebuild the search tree if the begin point hasn't changed,
+    # which saves time if the user only changes the ending point
     buildTree(begI) if @begI != begI
 
-    # Depth-first Search
+    # Depth-first Search, which is very easy since we have had the tree built
     @root.each do |node|
       if node.name == @endI.to_s
         @solution = node
@@ -60,6 +69,7 @@ class Maze
     return false
   end
 
+  # Return the solution as an array of coordinates
   def trace(begX, begY, endX, endY)
     begI = to_index(begX, begY)
     endI = to_index(endX, endY)
@@ -76,6 +86,7 @@ class Maze
     return @steps.map { |i| to_xy(i)}
   end
 
+  # Visualize the solution in a map. Not required.
   def display_trace
     if @steps.nil?
       puts "You must call trace before display_trace."
@@ -130,6 +141,7 @@ class Maze
   end
 
   # Part 2 Move around
+  #  abstract the moving actions to avoid mistakes in the program
   def to_xy(*args)
     if args.size == 1
       return (args[0] % @xSize) , (args[0] / @xSize)
@@ -174,8 +186,6 @@ class Maze
     [topOf(topOf(*args)), bottomOf(bottomOf(*args)), leftOf(leftOf(*args)), rightOf(rightOf(*args))]
   end
 
-
-
   # Part 3 Display maze
   def solved_digit_to_symbol(*args)
     return @solveMaze[to_index(*args)] == "3" ? "*" : digit_to_symbol(*args)
@@ -197,6 +207,8 @@ class Maze
     return args[0].nil? ? nil : @maze[to_index(*args)]
   end
 
+  # return the getSurrounding points as a string,
+  #   makes it easier to compare
   def getSurroundings(*args)
     s = ""
     neighbours(*args).each { |i| s += digitAt(i).to_i.to_s}
@@ -210,6 +222,7 @@ class Maze
     @solveMaze[rootName] = "2"
     @root = Tree::TreeNode.new(rootName.to_s)
 
+    # add all neighbouring cells to root, and add recursively
     addChildren(@root)
   end
 
@@ -219,29 +232,38 @@ class Maze
     [topOf(index), bottomOf(index), leftOf(index), rightOf(index)].each do |childName|
       tryAddNode(childName, p)
     end
-    # add children recursively
+    # recursively, add grandchildren to children
     p.children.each do |child|
       addChildren(child)
     end
+    # end the recursion when there's no child to add
     return unless p.has_children?
   end
 
   def tryAddNode(childName, parent)
+    # don't add the node if it's a wall or it has been visited
     return if @solveMaze[childName].to_i > 0
+    # mark the node visited
     @solveMaze[childName] = "2" # 2 => has been visited
+    # add the node to its parent
     parent << Tree::TreeNode.new(childName.to_s)
+    # return the node's coordinate
     return to_xy(childName)
   end
 
   # Part 5 Redesign maze
   def load_empty_redesign
+    # this algorithm requires the maze has odd width and odd height
     @xSize += 1 if @xSize.even?
     @ySize += 1 if @ySize.even?
     # mark all odd cells unvisited, and mark the rest cells walls
+    #   first mark all cells walls
     load_empty("1")
+    #   then find all odd cells
     oddX = (1..@xSize-1).step(2).to_a
     oddY = (1..@ySize-1).step(2).to_a
     empty_cells = oddX.product(oddY).map { |tuple| to_index(*tuple) }
+    #   finally mark odd cells unvisited (undecided)
     empty_cells.each { |index| @maze[index] = "4"}  # "4" => unvisited cell
   end
 
@@ -257,6 +279,7 @@ class Maze
     end
   end
 
+  # return an array of all indices of the string where a match is found
   def match_index(str, pattern)
     res = []
     str.scan(pattern) { res << Regexp.last_match.offset(0).first}
